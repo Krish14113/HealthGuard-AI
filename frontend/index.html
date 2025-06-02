@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HealthGuard AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f6f9fc;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+      color: #004d40;
+    }
+
+    .input-area {
+      position: relative;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 1rem;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+
+    #mic-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #e0f7fa;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    #mic-btn.recording {
+      animation: pulse 1s infinite;
+      background-color: #b2ebf2;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    button.predict {
+      width: 100%;
+      padding: 1rem;
+      font-size: 16px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+
+    button.predict:hover {
+      background-color: #004d40;
+    }
+
+    select {
+      width: 100%;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .result {
+      margin-top: 2rem;
+      background: #e8f5e9;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    .result p, .result ul {
+      margin: 0.5rem 0;
+    }
+
+    .result strong {
+      color: #00796b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🩺 HealthGuard AI 🩺</h1>
+
+    <label for="symptoms">Enter your symptoms:</label>
+    <div class="input-area">
+      <textarea id="symptoms" rows="4" placeholder="Example: I have a headache, nausea, and vomiting"></textarea>
+      <button id="mic-btn" onclick="toggleMic()">🎤</button>
+    </div>
+
+    <button class="predict" onclick="predict()">Predict Disease 🧑‍⚕️</button>
+
+    <div id="prediction-box" style="display: none;">
+      <label for="diseaseSelect">Select predicted disease:</label>
+      <select id="diseaseSelect" onchange="showDetails()"></select>
+
+      <div class="result" id="details">
+        <p><strong>Description:</strong> <span id="description">No prediction yet.</span></p>
+        <p><strong>Precautions:</strong></p>
+        <ul id="precautions"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let predictionData = [];
+    let recognition;
+    let isRecording = false;
+
+    function predict() {
+      const symptoms = document.getElementById('symptoms').value.trim();
+      if (!symptoms) {
+        alert("Please enter symptoms.");
+        return;
+      }
+
+      axios.post('http://127.0.0.1:5000/predict',
+        { symptoms: symptoms },
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+      .then(response => {
+        const predictions = response.data.predictions;
+        predictionData = predictions;
+
+        const select = document.getElementById('diseaseSelect');
+        select.innerHTML = '';
+
+        predictions.forEach((pred, index) => {
+          const option = document.createElement('option');
+          option.value = index;
+          option.text = `${pred.disease} (${(pred.confidence * 100).toFixed(1)}%)`;
+          select.appendChild(option);
+        });
+
+        document.getElementById('prediction-box').style.display = 'block';
+        showDetails(); // show first result
+      })
+      .catch(error => {
+        alert("Prediction failed. Make sure the backend is running.");
+        console.error(error);
+      });
+    }
+
+    function showDetails() {
+      const selected = document.getElementById('diseaseSelect').value;
+      const disease = predictionData[selected];
+
+      document.getElementById('description').textContent = disease.description || "Not available.";
+
+      const precautionsList = document.getElementById('precautions');
+      precautionsList.innerHTML = '';
+      if (disease.precautions && disease.precautions.length > 0) {
+        disease.precautions.forEach(p => {
+          const li = document.createElement('li');
+          li.textContent = p;
+          precautionsList.appendChild(li);
+        });
+      } else {
+        precautionsList.innerHTML = "<li>No precautions available.</li>";
+      }
+    }
+
+    function toggleMic() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Voice recognition not supported in this browser.");
+        return;
+      }
+
+      if (!recognition) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = function (event) {
+          let interimTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              document.getElementById('symptoms').value += event.results[i][0].transcript + ' ';
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+        };
+
+        recognition.onerror = function (event) {
+          console.error("Speech recognition error:", event.error);
+        };
+
+        recognition.onend = function () {
+          isRecording = false;
+          document.getElementById('mic-btn').classList.remove('recording');
+        };
+      }
+
+      if (!isRecording) {
+        recognition.start();
+        isRecording = true;
+        document.getElementById('mic-btn').classList.add('recording');
+      } else {
+        recognition.stop();
+        isRecording = false;
+        document.getElementById('mic-btn').classList.remove('recording');
+      }
+    }
+  </script>
+</body>
+</html>

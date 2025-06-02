@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealthGuard AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-zinc-950 text-white min-h-screen p-6">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-4xl font-bold text-center mb-6 text-pink-500">HealthGuard AI 🛡️</h1>
+
+    <form id="symptomForm" class="bg-zinc-900 p-6 rounded-xl shadow-xl">
+      <label for="symptomInput" class="block text-sm font-medium text-zinc-400 mb-2">Enter your symptoms (comma separated):</label>
+
+      <div class="flex items-center mt-2">
+        <input
+          id="symptomInput"
+          type="text"
+          placeholder="e.g. headache, nausea, cough"
+          class="w-full px-4 py-2 bg-zinc-800 text-white rounded-l-xl border border-zinc-700 focus:outline-none"
+        />
+        <button
+          type="button"
+          onclick="startListening()"
+          class="px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded-r-xl text-white"
+          title="Click to speak"
+        >
+          🎤
+        </button>
+      </div>
+
+      <button type="submit" class="mt-4 w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-2 px-4 rounded-xl transition">Predict</button>
+    </form>
+
+    <div id="resultContainer" class="mt-6 hidden">
+      <h2 class="text-2xl font-semibold mb-4">Predicted Diseases:</h2>
+      <select id="diseaseSelect" class="w-full p-2 bg-zinc-800 border border-zinc-600 rounded-xl text-white mb-4"></select>
+
+      <div id="diseaseInfo" class="bg-zinc-900 p-4 rounded-xl border border-zinc-700">
+        <h3 id="descriptionTitle" class="text-lg font-semibold mb-2 text-pink-400">Description</h3>
+        <p id="descriptionText" class="mb-4 text-zinc-300"></p>
+
+        <h3 id="precautionTitle" class="text-lg font-semibold mb-2 text-pink-400">Precautions</h3>
+        <ul id="precautionList" class="list-disc list-inside text-zinc-300"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("symptomForm");
+    const resultContainer = document.getElementById("resultContainer");
+    const diseaseSelect = document.getElementById("diseaseSelect");
+    const descriptionText = document.getElementById("descriptionText");
+    const precautionList = document.getElementById("precautionList");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const symptoms = document.getElementById("symptomInput").value;
+      const response = await fetch("http://127.0.0.1:5000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symptoms }),
+      });
+
+      if (!response.ok) {
+        alert("Prediction failed. Please try again.");
+        return;
+      }
+
+      const data = await response.json();
+      diseaseSelect.innerHTML = "";
+      data.predictions.forEach((disease) => {
+        const option = document.createElement("option");
+        option.value = disease.name;
+        option.text = `${disease.name} (${(disease.confidence * 100).toFixed(1)}%)`;
+        diseaseSelect.appendChild(option);
+      });
+
+      const first = data.predictions[0];
+      descriptionText.textContent = first.description;
+      precautionList.innerHTML = "";
+      first.precautions.forEach((p) => {
+        const li = document.createElement("li");
+        li.textContent = p;
+        precautionList.appendChild(li);
+      });
+
+      resultContainer.classList.remove("hidden");
+
+      diseaseSelect.addEventListener("change", (e) => {
+        const selected = data.predictions.find((d) => d.name === e.target.value);
+        descriptionText.textContent = selected.description;
+        precautionList.innerHTML = "";
+        selected.precautions.forEach((p) => {
+          const li = document.createElement("li");
+          li.textContent = p;
+          precautionList.appendChild(li);
+        });
+      });
+    });
+
+    // Voice recognition
+    const input = document.getElementById("symptomInput");
+    let recognition;
+
+    function startListening() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Your browser does not support voice input.");
+        return;
+      }
+
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = input.value ? input.value + ", " + transcript : transcript;
+        recognition.stop();
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        recognition.stop();
+      };
+    }
+  </script>
+</body>
+
+</html>
