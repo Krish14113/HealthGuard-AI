@@ -42,8 +42,8 @@ python app.py
 Open the index.html file in the frontend/ folder in your browser.
 
 📦 File Structure
-
-```HealthGuardAI/
+```
+HealthGuardAI/
 ├── backend/
 │   ├── app.py
 │   ├── ml_model.py
