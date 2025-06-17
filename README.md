@@ -30,7 +30,7 @@ HealthGuard AI is an offline, AI-powered early diagnosis system that allows user
 
 1. Backend Setup
 
-```bash
+bash
 cd backend
 python -m venv venv
 venv\Scripts\activate  # or source venv/bin/activate on Unix
