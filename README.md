@@ -30,19 +30,20 @@ HealthGuard AI is an offline, AI-powered early diagnosis system that allows user
 
 1. Backend Setup
 
-bash
+```bash
 cd backend
 python -m venv venv
 venv\Scripts\activate  # or source venv/bin/activate on Unix
 pip install -r requirements.txt
 python app.py
+```
 
 2. Frontend Setup
 Open the index.html file in the frontend/ folder in your browser.
 
 📦 File Structure
 
-HealthGuardAI/
+```HealthGuardAI/
 ├── backend/
 │   ├── app.py
 │   ├── ml_model.py
@@ -57,6 +58,7 @@ HealthGuardAI/
     ├── index.html
     ├── style.css
     └── script.js
+```
 
 🔒 License
 This project is developed under an academic setting and is patent-pending. Usage and reproduction without permission is restricted.
