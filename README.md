@@ -60,9 +60,9 @@ HealthGuardAI/
     └── script.js
 ```
 
-🔒 License
+🔒 License<br>
 This project is developed under an academic setting and is patent-pending. Usage and reproduction without permission is restricted.
 
-👨‍⚕️ Authors
-Krish Jain
+👨‍⚕️ Authors<br>
+Krish Jain<br>
 Rishika Singh Parihar
